@@ -17,8 +17,79 @@
 
 ### GPU流水线
 
+![text](http://q59qahcgi.bkt.clouddn.com/IMG_0061%2820200222-124110%29.PNG)
+绿色：完全可编程、黄色：可配置但不可编程、蓝色：由GPU设定、
+实线：Shader由开发者编程、虚线：Shader可选编程
+
+顶点着色器：完全可编程，实现顶点的空间变换、顶点着色等。
+曲面细分着色器：可选，用于细分图元。
+几何着色器：可选，逐图元的着色操作。
+裁剪
+屏幕映射：不可配置和编程，把图元坐标转换到屏幕坐标中。
+
+三角形设置：固定函数，计算边界像素的坐标信息
+三角形遍历：固定函数，判断像素是否被三角网格覆盖，弱覆盖则生成片元
+片元着色器：完全可编程，逐片元着色、纹理坐标
+逐片元着色：不可编程，但可配置，修改颜色、深度缓冲、进行混合 
+
+### Shader的特色
+- GPU流水线上一些可高度编程的阶段，而由着着色器编译出来的最终代码是会在GPU上运行的
+- 有一些特定类型的着色器，如顶点着色器、片元着色器等
+- 依靠着色器我们可以控制流水线中的渲染细节，列入用顶点着色器来进行顶点变换以及传递数据，用片元着色器来进行逐项渲染
+
+
+## Unity Shader 基础
+
 ```
-graph LR;
-    顶点数据-->顶点着色器-->几何着色器;
-    B-->C;
+Shader "ShaderName"{
+    Properties{
+        //属性
+    }
+    SubShader{
+        //显卡A使用的子着色器
+
+        //可选
+        "Tags"
+
+        //可选
+        "RenderSetup"
+
+        Pass{
+            //定义一个完整流程
+        }
+    }
+    SubShader{
+        //显卡B使用的子着色器
+    }
+    Fallback "VertexLit"
+    //留后路
+}
 ```
+
+### <center>常见的渲染状态设置选项</center>
+
+状态名称|设置指令|解释
+|----- | -----|------
+Cull|Cull Back/Front/ Off|设置剔除模式：提出背面/正面/关闭
+ZTest|ZTest Less Greater/ LEqual/GEqual/Equal/NotEqual/Always|设置深度检测时使用的函数
+ZWrite|Zwrite On/ Off|开启/关闭深度
+Blend|Blend SrcFactor DstFactor|开启并设置混合模式
+
+### <center>SubShader的标签类型</center>
+
+标签类型|说明|例子
+|--|--|--
+Queue|控制渲染顺序，让透明物体在不透明物体之后渲染|Tags {"Queue"="Transparent"}
+RenderType|对着色器分类，用于着色器替代|Tags {"RenderType"="Opaque"}
+DisableBatching|一些SubShader在Unity的批处理时会出现错误，例如使用了模型空间下的坐标进行定点动画。这是可以通过该标签来直接指明使得否对该SubShader使用批处理|Tags {"DisableBatching"="True"}
+ForceNoShadowCasting|控制使用SubShader的物体是否会投射阴影|Tags {"ForceNoShadowCasting"="True"}
+IgnoreProjector|如果该标签值为True，那么使用该SubShader的物体将不会受Projector的影响，通常用半透明物体|Tags {"IgnoreProjector"="True"}
+CanUseSpriteAtlas|当该SubShader使用于精灵(sprites)时，该标签设置为False|Tags {"CanUseSpriteAtlas"="False"}
+PreviewType|知名材质面板将如何预览该材质。默认情况下，材质将显示一个球，我们可以通过把该标签的值设置为"Plane""SkyBox"来改变预览类型|Tags {"PreviewType"="Plane"}
+
+### <center>Pass的标签类型</center>
+
+标签类型|说明|例子
+|--|--|--
+LightMode|定义该Pass在Unity的渲染流水线中的角色|Tags {"LightMode"="ForwardBase"}
+RequireOptions|用于指定当满足某些条件时才渲染该Pass，他的只是一个有空格分隔的字符串。目前，Unity支持的选项有SoftVegetation。|Tags {"RequireOptions"="SoftVegetation"}
