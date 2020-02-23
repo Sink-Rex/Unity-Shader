@@ -1,5 +1,6 @@
 # Unity-Shader
 程序员的三大浪漫是编译原理、操作系统、图形学
+计算机图形学第一定律：如果它看起来是对的，那么他就是对的。
 
 ## 渲染流水线
 ### 渲染流程的三个阶段：应用阶段、几何阶段、光栅化阶段
@@ -93,3 +94,48 @@ PreviewType|知名材质面板将如何预览该材质。默认情况下，材�
 |--|--|--
 LightMode|定义该Pass在Unity的渲染流水线中的角色|Tags {"LightMode"="ForwardBase"}
 RequireOptions|用于指定当满足某些条件时才渲染该Pass，他的只是一个有空格分隔的字符串。目前，Unity支持的选项有SoftVegetation。|Tags {"RequireOptions"="SoftVegetation"}
+
+# 基础光照
+## 光源
+在光学里，我们使用辐射度来量化光。
+根据入社的光线数量和方向，无门可以计算出光线的数量和方向，我们称之为出射度。
+辐射度和出射度的比值满足线性关系，其值为材质的漫反射和高光反射的属性。
+## 吸收和散射
+光线由光源发射出来后，就会与一些物体相交。通常，相交的结果有两个：散射和吸收。
+
+散射只改变光线的方向，但不改变光线的密度和颜色。
+光线散射后有两种方向：一种会散射带物体内部，成为折射或透射；一种会散射到物体外部，这种现象称为反射。
+为了计算两种不同的散射方向，高光反射表示物体表面是如何反射光线的，漫反射表示有多少光线会被折射、吸收和散射出表面。
+
+吸收只改变光线的密度和颜色，但不改变光线的方向。
+
+## 标准光照模型
+### 自发光 C<sub>emissive</sub>
+用于描述当给定一个方向时，一个表面本身会向该方向发射多少辐射量。
+自发光的计算也很简单，就是直接只用来该材质的自发光颜色：
+__C<sub>emissive</sub>=M<sub>emissive</sub>__
+
+### 高光反射 C<sub>specular</sub>
+用于描述当光线从光源射到模型表面时，该表面会在完全镜面反射方向散射多少辐射量。
+__Phong模型__
+![test](http://q59qahcgi.bkt.clouddn.com/60C1A7D7BF90EA9AAE8857A085A0C1B7.png)
+__$\vec{r}$ = 2($\vec{n}$ $\cdot$ $\vec{l}$)$\vec{n}$ - $\vec{l}$__
+__C<sub>specular</sub> = (C<sub>light</sub> $\cdot$ M<sub>specular</sub>)max(0,$\vec{v}$ $\cdot$ $\vec{r}$)<sup>M<sub>gloss</sub></sup>__
+其中，M<sub>gloss</sub>是材质的光泽度，也被称为反光度。它用于控制高光区域的亮点有多宽，其值越大亮点越小。M<sub>specular</sub>是材质的高光反射颜色，它用于控制该材料对于高反射光的强度和颜色。C<sub>light</sub>则是光源的颜色和强度。
+
+__Blinn模型__
+![test](http://q59qahcgi.bkt.clouddn.com/D03E4FB4603EFD64B3F382A902742408.png)
+Blinn为了防止计算反向的$\vec{r}$引入了一个新向量$\vec{h}$，他是通过对$\vec{v}$和$\vec{l}$的取平均后再归一化得到的：__$\vec{h}$ = $\frac{\vec{v} + \vec{l}}{|\vec{v} + \vec{l}|}$__
+__C<sub>specular</sub> = (C<sub>light</sub> $\cdot$ M<sub>specular</sub>)max(0,$\vec{v}$ $\cdot$ $\vec{h}$)<sup>M<sub>gloss</sub></sup>__
+在实验中，入股摄像机和光源的距离足够远，Blinn模型会把$\vec{v}$和$\vec{l}$认为是定值，快于Phong模型，相反若是两者经常变化则Phong模型更快一些。
+
+### 漫反射 C<sub>diffuse</sub>
+用于描述当光线才光源照射到模型表面是，该表面会向每个方向散射多上辐射量。
+漫反射光照符合兰伯特定律：反射光线的强度与表面法线和光线方向之间夹角的余弦值成正比。
+__C<sub>diffuse</sub>=(C<sub>light</sub> $\cdot$ M<sub>diffuse</sub>)MAX(0, $\vec{n}$ $\cdot$ $\vec{l}$ )__
+$\vec{n}$是表面法线，$\vec{l}$是指向光源的单位向量，M<sub>diffuse</sub>是材质的漫反射颜色，C<sub>light</sub>是光源的颜色。为了防止才背后来的光照照亮，我们使用最大值函数将其截取到0，以防止法线和光源方向的点乘为负值。
+
+### 环境光 C<sub>ambient</sub>
+用于描述其他所有的间接光照。
+场景所有物体使用同一个环境光所以有：
+__C<sub>ambient</sub>=G<sub>ambient</sub>__
